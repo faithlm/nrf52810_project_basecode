@@ -1,15 +1,16 @@
 /*
  * @Author: Lemon
  * @Date: 2021-01-22 09:38:06
- * @LastEditTime: 2021-01-22 15:12:08
+ * @LastEditTime: 2021-01-25 16:09:05
  * @LastEditors: Lemon
  * @Description: 蓝牙功能代码
- * @FilePath: \nRF5_SDK_17.0.2_d674dde\examples\ble_peripheral\ble_app_uart\user_file\bluetooth\bluetooth.c
+ * @FilePath: \code\nRF5_SDK_17.0.2_d674dde\examples\ble_peripheral\ble_app_uart\user_file\bluetooth\bluetooth.c
  */
 
 #include "project_base_include.h"
 #include "bluetooth.h"
 #include "app_timer.h"
+#include "ble_data_process.h"
 
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -44,6 +45,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 {
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
+
 
 /**@brief Function for handling Queued Write Module errors.
  *
@@ -119,10 +121,10 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
     if (p_evt->type == BLE_NUS_EVT_RX_DATA)
     {
-        uint32_t err_code;+
         //NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
         //NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 		//app_uart_put(p_evt->params.rx_data.p_data[0]);
+        frame_prase_schedule(p_evt->params.rx_data.p_data,p_evt->params.rx_data.length);
     }
 
 }

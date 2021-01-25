@@ -1,79 +1,80 @@
+/*
+ * @Author: Lemon
+ * @Date: 2021-01-22 10:40:04
+ * @LastEditTime: 2021-01-25 16:37:35
+ * @LastEditors: Lemon
+ * @Description: 
+ * @FilePath: \code\nRF5_SDK_17.0.2_d674dde\examples\ble_peripheral\ble_app_uart\user_file\user_saadc\user_adc.c
+ */
+ #include "project_base_include.h"
 #include "user_adc.h"
 
-static nrf_saadc_value_t adc_buf[2];
-static uint16_t  batt_lvl_in_milli_volts = 0;
-static bool low_power_statue = 0;
-static uint16_t  temp_value = 0;
-void saadc_event_handler(nrf_drv_saadc_evt_t const * p_event)
+#define SAADC_CHANNEL_COUNT   4
+#define SAADC_SAMPLE_INTERVAL_MS 250
+static volatile bool is_ready = true;
+static nrf_saadc_value_t samples[SAADC_CHANNEL_COUNT];
+static nrfx_saadc_channel_t channels[SAADC_CHANNEL_COUNT] = {NRFX_SAADC_DEFAULT_CHANNEL_SE(NRF_SAADC_INPUT_AIN0, 0),
+                                                             NRFX_SAADC_DEFAULT_CHANNEL_SE(NRF_SAADC_INPUT_AIN1, 1),
+                                                             NRFX_SAADC_DEFAULT_CHANNEL_SE(NRF_SAADC_INPUT_AIN2, 2),
+                                                             NRFX_SAADC_DEFAULT_CHANNEL_SE(NRF_SAADC_INPUT_AIN3, 3)};
+
+void saadc_event_handler(nrfx_saadc_evt_t const * p_event)
 {
-    if (p_event->type == NRF_DRV_SAADC_EVT_DONE)
+    if (p_event->type == NRFX_SAADC_EVT_DONE)
     {
-        nrf_saadc_value_t adc_result;
+        for(int i = 0; i < p_event->data.done.size; i++)
+        {
+            NRF_LOG_INFO("CH%d: %d", i, p_event->data.done.p_buffer[i]);
+        }
 
-        uint32_t          err_code;
-
-        err_code = nrf_drv_saadc_buffer_convert(p_event->data.done.p_buffer, 1);
-        APP_ERROR_CHECK(err_code);
-        adc_result = p_event->data.done.p_buffer[0];
-		batt_lvl_in_milli_volts = (uint16_t)(adc_result*14);//(adc_result/1024*(1/6)*0.6*4)	
-		if(get_work_mode()!=WORK_MODE_OUTSIDE)
-		{
-			if(batt_lvl_in_milli_volts<=LOWPOWER_THREHOLD_VALUE_MV)
-			{
-					low_power_statue = true;
-			}
-			else
-			{
-					low_power_statue = false;
-			}
-		}
-		else
-		{
-			if(batt_lvl_in_milli_volts<=LOWPOWER_THREHOLD_VALUE_MV_OUTSIDE)
-			{
-					low_power_statue = true;
-			}
-			else
-			{
-					low_power_statue = false;
-			}
-		}
-		NRF_LOG_INFO("Volate is %d",batt_lvl_in_milli_volts);
-
-//    show_adv_mode();
-        
+        is_ready = true;
     }
-	nrf_drv_saadc_uninit();
-	NRF_SAADC->INTENCLR=(SAADC_INTENCLR_END_Clear << SAADC_INTENCLR_END_Pos);
-	NVIC_ClearPendingIRQ(SAADC_IRQn);
+
+    /* Applying workaround from Errata 212, otherwise current is stuck at 4-500uA during sleep after first sample. */
+    volatile uint32_t temp1;
+    volatile uint32_t temp2;
+    volatile uint32_t temp3;
+
+    temp1 = *(volatile uint32_t *)0x40007640ul;
+    temp2 = *(volatile uint32_t *)0x40007644ul;
+    temp3 = *(volatile uint32_t *)0x40007648ul;
+
+    *(volatile uint32_t *)0x40007FFCul = 0ul; 
+    *(volatile uint32_t *)0x40007FFCul; 
+    *(volatile uint32_t *)0x40007FFCul = 1ul;
+
+    *(volatile uint32_t *)0x40007640ul = temp1;
+    *(volatile uint32_t *)0x40007644ul = temp2;
+    *(volatile uint32_t *)0x40007648ul = temp3;
 }
-uint16_t get_volate_value(void)
+void sample_timer_handler(void)
 {
-	return batt_lvl_in_milli_volts;
-}
-uint16_t get_temp_value(void)
-{
-	return temp_value;
-}
-bool get_low_power_statue(void)
-{
-	return low_power_statue;
+    if(is_ready)
+    {
+        ret_code_t err_code;
+
+        err_code = nrfx_saadc_simple_mode_set((1<<0|1<<1|1<<2|1<<3),
+                                              NRF_SAADC_RESOLUTION_12BIT,
+                                              NRF_SAADC_OVERSAMPLE_4X,
+                                              saadc_event_handler);
+        APP_ERROR_CHECK(err_code);
+        
+        err_code = nrfx_saadc_buffer_set(samples, SAADC_CHANNEL_COUNT);
+        APP_ERROR_CHECK(err_code);
+
+        err_code = nrfx_saadc_mode_trigger();
+        APP_ERROR_CHECK(err_code);
+
+        is_ready = false;
+    }
+    
 }
 void saadc_configure_init_and_sample(void)
 {
-    ret_code_t err_code = nrf_drv_saadc_init(NULL, saadc_event_handler);
+	uint32_t err_code;
+    err_code = nrfx_saadc_init(NRFX_SAADC_CONFIG_IRQ_PRIORITY);
     APP_ERROR_CHECK(err_code);
 
-    nrf_saadc_channel_config_t config = NRF_DRV_SAADC_DEFAULT_CHANNEL_CONFIG_SE(NRF_SAADC_INPUT_AIN4);
-    err_code = nrf_drv_saadc_channel_init(0,&config);
+    err_code = nrfx_saadc_channels_config(channels, SAADC_CHANNEL_COUNT);
     APP_ERROR_CHECK(err_code);
-
-    err_code = nrf_drv_saadc_buffer_convert(&adc_buf[0], 1);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = nrf_drv_saadc_buffer_convert(&adc_buf[1], 1);
-    APP_ERROR_CHECK(err_code);
-    
-	err_code = nrf_drv_saadc_sample();
-	APP_ERROR_CHECK(err_code);	
 }

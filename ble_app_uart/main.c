@@ -10,6 +10,7 @@
 #include "user_hal.h"
 #include "user_timer.h"
 #include "bluetooth.h"
+#include "user_adc.h"
 /**
  * @description: 系统初始化
  * @param {*}
@@ -20,6 +21,7 @@ void system_init(void)
     user_hal_init();
     user_timer_init();
     user_bluetooth_init();
+	saadc_configure_init_and_sample();
 }
 
 int main(void)
