@@ -12,8 +12,9 @@
 #include "nrf_drv_clock.h"
 #include "app_timer.h"
 
-#define TIMER_1MS_COUNT         50
 #define M_1S_TIMER_TIMEOUT   APP_TIMER_TICKS(1000) 
+#define DATA_TRANS_INTERVAL		5
 
 void user_timer_init(void);
+uint32_t get_now_second(void);
 #endif

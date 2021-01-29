@@ -34,8 +34,14 @@
 #define PROTOCOL_HEADER_HIGH    0x4A
 #define PROTOCOL_HEADER_LOW     0x48
 
-#define NRF_ERROR_INVALID_CMD  0x01
-#define NRF_ERROR_CRC_ERROR    0x02
+#define NRF_JH_SUCCESS		   0x01
+#define NRF_ERROR_INVALID_CMD  0x02
+#define NRF_ERROR_CRC_ERROR    0x03
+#define NRF_ERROR_INVALID_CMD_LENGTH  0x04
+
+#define JH_CMD_TYPE_ACK   true
+#define JH_CMD_TYPE_CMD   false
+
 
 #define MAX_PAYLOAD_CONTEXT  20
 typedef struct {
@@ -47,5 +53,8 @@ typedef struct {
     uint8_t  frame_crc;
 }jh_frame_t;
 
-void frame_prase_schedule(uint8_t * p_data,uint16_t length);
+void frame_prase_schedule(const uint8_t * p_data,uint16_t length);
+void data_encoded_and_send(uint8_t op_code,uint8_t *p_data);
+void cmd_ack_send(uint8_t op_code,uint8_t err_code);
+
 #endif

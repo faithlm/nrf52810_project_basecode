@@ -21,7 +21,6 @@ void system_init(void)
     user_hal_init();
     user_timer_init();
     user_bluetooth_init();
-	saadc_configure_init_and_sample();
 }
 
 int main(void)

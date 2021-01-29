@@ -1,10 +1,10 @@
 /*
  * @Author: Lemon
  * @Date: 2021-01-22 09:38:06
- * @LastEditTime: 2021-01-25 16:09:05
+ * @LastEditTime: 2021-01-29 14:56:41
  * @LastEditors: Lemon
  * @Description: 蓝牙功能代码
- * @FilePath: \code\nRF5_SDK_17.0.2_d674dde\examples\ble_peripheral\ble_app_uart\user_file\bluetooth\bluetooth.c
+ * @FilePath: \nRF5_SDK_17.0.2_d674dde\examples\ble_peripheral\ble_app_uart\user_file\bluetooth\bluetooth.c
  */
 
 #include "project_base_include.h"
@@ -46,6 +46,8 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
+//状态机结构体，记录当前设备状态，具体见结构体构成
+jh_state_mechine_t jh_state_mechine;
 
 /**@brief Function for handling Queued Write Module errors.
  *
@@ -103,9 +105,14 @@ static void gap_params_init(void)
     err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
     APP_ERROR_CHECK(err_code);
 }
-
+/**
+ * @description: 配置服务数据处理接口，保留用于空中升级
+ * @param {*}
+ * @return {*}
+ */
 static void config_data_handler(ble_config_evt_t * p_evt)
 {
+    //Todo
 }
 /**@brief Function for handling the data from the Nordic UART Service.
  *
@@ -117,8 +124,6 @@ static void config_data_handler(ble_config_evt_t * p_evt)
 /**@snippet [Handling the data received over BLE] */
 static void nus_data_handler(ble_nus_evt_t * p_evt)
 {
-
-
     if (p_evt->type == BLE_NUS_EVT_RX_DATA)
     {
         //NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
@@ -129,6 +134,17 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
 }
 
+uint32_t ble_send_data_to_master(uint8_t *p_data,uint16_t length)
+{
+	if(jh_state_mechine.connect_statue)
+	{
+		uint32_t err_code;
+		err_code = ble_nus_data_send(&m_nus,p_data,&length,m_conn_handle);
+		//NRF_LOG_INFO("send data to master err_code = %d",err_code);
+		return err_code;
+	}
+	return NRF_SUCCESS;
+}
 /**@snippet [Handling the data received over BLE] */
 
 
@@ -266,6 +282,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_INFO("Disconnected");
             // LED indication will be changed when advertising starts.
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
+			jh_state_mechine.connect_statue		= false;
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -403,9 +420,22 @@ static void advertising_start(void)
     uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 }
-
+static void jh_state_mechine_init(void)
+{
+	jh_state_mechine.connect_statue			= false;
+	jh_state_mechine.low_power_statue		= false;
+	jh_state_mechine.start_trans_statue		= false;
+	jh_state_mechine.wait_ack_statue		= false;
+	jh_state_mechine.last_cmd_time			= 0;
+	jh_state_mechine.last_start_trans_time	= 0;
+	jh_state_mechine.last_trans_time		= 0;
+	jh_state_mechine.trans_interval			= DEFAULT_TRANS_INTERVAL;
+	jh_state_mechine.wait_ack_interval		= DEFAULT_WAOT_ACK_TIME;
+	jh_state_mechine.trans_time				= DEFAULT_TRANS_TIME;
+}
 uint32_t user_bluetooth_init(void)
 {
+	jh_state_mechine_init();
     ble_stack_init();
     gap_params_init();
     gatt_init();

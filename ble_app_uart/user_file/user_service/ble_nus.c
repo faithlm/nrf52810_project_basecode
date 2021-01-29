@@ -42,6 +42,7 @@
 #include "ble.h"
 #include "ble_nus.h"
 #include "ble_srv_common.h"
+#include "bluetooth.h"
 
 #define NRF_LOG_MODULE_NAME ble_nus
 #if BLE_NUS_CONFIG_LOG_ENABLED
@@ -148,11 +149,14 @@ static void on_write(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
             {
                 p_client->is_notification_enabled = true;
                 evt.type                          = BLE_NUS_EVT_COMM_STARTED;
+				jh_state_mechine.connect_statue		= true;
+
             }
             else
             {
                 p_client->is_notification_enabled = false;
                 evt.type                          = BLE_NUS_EVT_COMM_STOPPED;
+				jh_state_mechine.connect_statue		= false;
             }
 
             if (p_nus->data_handler != NULL)

@@ -1,7 +1,7 @@
 /*
  * @Author: Lemon
  * @Date: 2021-01-22 10:39:49
- * @LastEditTime: 2021-01-22 11:20:27
+ * @LastEditTime: 2021-01-29 15:13:09
  * @LastEditors: Lemon
  * @Description: bsp相关代码
  * @FilePath: \nRF5_SDK_17.0.2_d674dde\examples\ble_peripheral\ble_app_uart\user_file\user_bsp\user_bsp.c
@@ -35,6 +35,11 @@ static void buttons_leds_init(void)
 
 }
 
+/**
+ * @description: bsp模块初始化
+ * @param {*}
+ * @return {*}
+ */
 uint32_t user_bsp_init(void)
 {
     buttons_leds_init();
